@@ -1,0 +1,41 @@
+<html>
+    <head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Настройки MQTT</title>
+		<link rel="stylesheet" href="style.css" >
+		<script type="text/javascript" src="function.js"> </script>
+    </head>
+    <body>
+        <div id="ethsettings" class="main">
+            <h1>Настройки MQTT</h1>
+			<form method="POST" action="savemqtt" enctype="multipart/form-data">
+                <div class="navbarform">
+	                <div>
+                        <label for="mqtton" class="form-check-label control-label">Client MQTT:</label>
+                        <select id="mqtton" name="mqtton">
+                            <option value="Off">Off</option>
+                            <option value="On">On</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="ip_mqtt">IP server MQTT: </label>
+				        <input name="ip_mqtt" id="ip_mqtt" size="16" pattern="^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$" required>
+                    </div>
+                    <div>
+                        <label for="port_mqtt">Port server: </label>
+				        <input name="port_mqtt" id="port_mqtt" value="1883" >
+                    </div>
+                    <div>
+                        <label for="id_mqtt">Client ID: </label>
+				        <input name="id_mqtt" id="id_mqtt" value="None" >
+                    </div>
+                    <div>
+				        <input type="SUBMIT" value="Сохранить" id="send">
+				        <a href='/'>Назад</a>
+                    </div>
+	           </div>
+			</form>
+        </div>    
+    </body>
+</html>

@@ -51,17 +51,18 @@ function loader() {
         .then(response=>response.json())
         .then(data=>{
             for (let key in data) {
-                    // if(key == "wifimode" && document.getElementById("wifimode")) helpFunctions.checkChecked(data[key],["dhsp","ssdp_name","ssid","pswd","ip","gateway","subnet"]);
+                    // if(key == "wifimode" && document.getElementById("wifimode")) helpFunctions.checkChecked(data[key],["dhsp","host_name","ssid","pswd","ip","gateway","subnet"]);
                     if(key == "dhsp" && document.getElementById("dhsp")) helpFunctions.checkChecked(data[key],["ip","gateway","subnet"]);
                     if(key == "mqtton"&& document.getElementById("mqtton")) helpFunctions.checkChecked(data[key],["ip_mqtt","port_mqtt","id_mqtt"]);
                     if(key == "versionProsh" && data[key] && document.getElementById(key)) document.getElementById(key).innerHTML = data[key];
+                    if(key == "host_name" && data[key] && document.getElementById(key)) document.getElementById(key).innerHTML = data[key];
                     if(document.getElementById(key)) document.getElementById(key).value = data[key];
             }
         })
         .catch(error => console.log(error));
     }
 
-    // helpFunctions.addEventCheckChecked(document.getElementById("wifimode"), ["dhsp","ssdp_name","ssid","pswd","ip","gateway","subnet"]);
+    // helpFunctions.addEventCheckChecked(document.getElementById("wifimode"), ["dhsp","host_name","ssid","pswd","ip","gateway","subnet"]);
     helpFunctions.addEventCheckChecked(document.getElementById("dhsp"), ["ip","gateway","subnet"]);
     helpFunctions.addEventCheckChecked(document.getElementById("mqtton"), ["ip_mqtt","port_mqtt","id_mqtt"]);
     //----------------------------------------------------------------------------

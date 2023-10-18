@@ -1,8 +1,13 @@
+//Добавить возможностьизменнения MAC
+//HostName не понятно нужен ли
+
 #include <Arduino.h>
 #include "ArduinoNvs.h"
 #include <math.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
+#include <WiFiUdp.h>
 #include <ESPAsyncWebServer.h>
 #include <ESP32httpUpdate.h>        //!!!!! под вопросом
 #include <PubSubClient.h>
@@ -12,10 +17,12 @@
 #include <Bounce2.h>
 #include <webserverfunc.h>
 #include <MyClassWachDog.h>
-#include <MyClassDisplayDwin.h>
+//#include <MyClassDisplayDwin.h>
 #include <MyClassTimer.h>
 
 String version_prosh ="0.1b";//------Версия прошивки
+//-------------------------------------------------------------Режим отладки---------------------------------------------------------------------------------------
+const bool DEBUG = 1;
 //--------------------------------------------------------------WachDog--------------------------------------------------------------------------------------------
 MyWachDog wachdog(whatchdog);
 //--------------------------------------------------------------Определение кнопки---------------------------------------------------------------------------------
@@ -23,13 +30,24 @@ Bounce debouncer = Bounce();
 //--------------------------------------------------------------Хранение данных------------------------------------------------------------------------------------
 MyTimer rest_esp(2);
 //--------------------------------------------------------------Сетевые настройки WIFI-----------------------------------------------------------------------------
+struct
+{
 String str_soft_ap = "On";
 uint8_t ip[4] = {192,168,1,2};
 uint8_t gateway[4] = {192,168,1,1};
 uint8_t subnet[4] = {255,255,255,0};
-String ssdp_name = "Display";
+String host_name = "Display";
 String str_ssid = "None";
 String str_dhsp = "On";
+} wifi_settings;
+uint8_t newMACAddress[] = {0x32, 0xAE, 0xA4, 0x07, 0x0D, 0x60};
+//--------------------------------------------------------------Настройка UDP-------------------------------------------------------------------------------------
+WiFiUDP Udp;
+struct{
+unsigned int localUdpPort = 4210;
+char incomingPacket[255];
+char  replyPacket[14] = "SmartESPHello";
+} udp_settings;
 //--------------------------------------------------------------переменные для MQTT--------------------------------------------------------------------------------
 const char* ipmqtt = "0.0.0.0";
 const char* CLIENT_ID = "Display";
@@ -42,93 +60,106 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 //AsyncEventSource events("/events");
 
-StaticJsonDocument<400> netBuf; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Нужен ли
+StaticJsonDocument<400> netBuf;
 
 void setup() {
 
-  pinMode(btn_reset, INPUT_PULLUP);
-  debouncer.attach(btn_reset);
-  debouncer.interval(50);
+  pinMode(btn_reset, INPUT_PULLUP); //???????????????????????
+  debouncer.attach(btn_reset); //????????????????????????????
+  debouncer.interval(50); //?????????????????????????????????
   wachdog.start();   //-----Start WachDog
   NVS.begin();       //-----Start ArduinoNvs
 
   delay(1000);
   Serial.begin(115200);
 
-  // NVS.setString("wifimode", "On");// !!!!!!!!!!!!!!!!!Для теста удалить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // NVS.setString("ssid", "Smart");// !!!!!!!!!!!!!!!!!Для теста удалить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // NVS.setString("pswd", "123456");// !!!!!!!!!!!!!!!!!Для теста удалить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // NVS.setString("ip", "192.168.22.2");// !!!!!!!!!!!!!!!!!Для теста удалить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // NVS.setString("dhsp", "Off");// !!!!!!!!!!!!!!!!!Для теста удалить!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  str_soft_ap = NVS.getString("wifimode") == "Off" ? "Off" : "On";       //-----Проверяем наличие кюча wifimode
-  str_dhsp = NVS.getString("dhsp") == "Off" ? "Off" : "On"; //---------------Чтение параметра dhcp
+  wifi_settings.str_soft_ap = NVS.getString("wifimode") == "Off" ? "Off" : "On";  //-----Проверяем наличие кюча wifimode
+  wifi_settings.str_dhsp = NVS.getString("dhsp") == "Off" ? "Off" : "On";         //---------------Чтение параметра dhcp
     //----------------------------------------------
-  const String str_ssdp_name = NVS.getString("ssdp_name");
-  if(str_ssdp_name.length() && str_ssdp_name != ssdp_name) ssdp_name = str_ssdp_name; //---------------Чтение имя WIFI
+  const String str_host_name = NVS.getString("host_name");
+  if(str_host_name.length() && str_host_name != wifi_settings.host_name) wifi_settings.host_name = str_host_name; //---------------Чтение имя WIFI
   //----------------------------------------------
   const String const_str_ssid = NVS.getString("ssid");
-  if(const_str_ssid.length() && const_str_ssid != str_ssid) str_ssid = const_str_ssid;
-  const char* ssid = str_ssid.c_str(); //---------------Чтение логина WIFI
+  if(const_str_ssid.length() && const_str_ssid != wifi_settings.str_ssid) wifi_settings.str_ssid = const_str_ssid;
+  const char* ssid = wifi_settings.str_ssid.c_str(); //---------------Чтение логина WIFI
   //----------------------------------------------
   const String const_str_pass = NVS.getString("pswd");
-  const char* pass = const_str_pass.c_str(); //---------------Чтение пароля WIFI
+  const char* pass = const_str_pass.c_str();         //---------------Чтение пароля WIFI
   //----------------------------------------------
   const String str_ip = NVS.getString("ip");              
-  if(str_ip.length())writeNetworkSetting(str_ip.c_str(),ip); //---------------Чтение пароля ip
+  if(str_ip.length())writeNetworkSetting(str_ip.c_str(),wifi_settings.ip);      //---------------Чтение пароля ip
   //----------------------------------------------
-  const String str_gw = NVS.getString("gw");              
-  if(str_gw.length())writeNetworkSetting(str_gw.c_str(),gateway); //---------------Чтение пароля gateway
+  const String str_gw = NVS.getString("gateway");              
+  if(str_gw.length())writeNetworkSetting(str_gw.c_str(),wifi_settings.gateway); //---------------Чтение пароля gateway
   //----------------------------------------------
   const String str_subnet = NVS.getString("subnet");              
-  if(str_subnet.length())writeNetworkSetting(str_subnet.c_str(),subnet); //---------------Чтение пароля subnet
+  if(str_subnet.length())writeNetworkSetting(str_subnet.c_str(),wifi_settings.subnet); //---------------Чтение пароля subnet
 
-  if(str_soft_ap == "Off"){                                              //-----Проверяем состояние параметра
+  if(wifi_settings.str_soft_ap == "Off"){                                              //-----Проверяем состояние параметра
     if((digitalRead(btn_reset) == LOW)){                            //-----Сбрасываем параметр wifimode для перехода точки в режим AP
       NVS.setString("wifimode", "On");
-      Serial.println("Please reboot module for coniguration");
+      if(DEBUG)Serial.println("Please reboot module for coniguration");
       ESP.restart();        
     }
     else{
       WiFi.mode(WIFI_STA);
-      Serial.println();
-      Serial.println("Connecting to ");
-      Serial.println(ssid);
-      Serial.println(pass);
-
+      if(DEBUG){
+        esp_wifi_set_mac(WIFI_IF_STA, &newMACAddress[0]);
+        Serial.println();
+        Serial.println("Connecting to ");
+        Serial.println(ssid);
+        Serial.println(pass);
+      }
+      WiFi.setHostname(wifi_settings.host_name.c_str());
       WiFi.begin(ssid, pass);
 
-      if(str_dhsp=="Off"){                  //--------Проверяем состояние флага dhsp
-          WiFi.config(ip, gateway, subnet);
+      if(wifi_settings.str_dhsp=="Off"){                  //--------Проверяем состояние флага dhsp
+          WiFi.config(wifi_settings.ip, wifi_settings.gateway, wifi_settings.subnet);
         }
-          
       while (WiFi.status() != WL_CONNECTED) {
         if(digitalRead(btn_reset) != LOW){
           delay(1000);
           count_WIFI++;
           if(count_WIFI>=60){ESP.restart();}
-          else{Serial.print(".");}
+          else{
+            if(DEBUG)Serial.print(".");
+            }
         }
         else{
-          Serial.println("reboot awp");
           NVS.setString("wifimode", "On");
-          Serial.println("Reboot");
-          //ESP.restart();
+          if(DEBUG)Serial.println("reboot awp");
+          if(DEBUG)Serial.println("Reboot");
+          ESP.restart();
         }
       }
 
-      Serial.println("");
-      Serial.println("WiFi connected");  
-      Serial.println("ip addres: "+getStringNetworAddress(ip));
-      Serial.println("gateway addres: "+getStringNetworAddress(gateway));
-      Serial.println("subnet addres: "+getStringNetworAddress(subnet));
+      if(DEBUG){
+        Serial.println("");
+        Serial.println("WiFi connected");
 
+        Serial.print("hostname ");
+        Serial.println(WiFi.getHostname());
+
+        Serial.print("ip addres: ");  
+        Serial.println(WiFi.localIP());
+
+        Serial.print("gateway addres: ");
+        Serial.println(WiFi.gatewayIP());
+
+        Serial.print("subnet addres: ");
+        Serial.println(WiFi.subnetMask());
+
+        Serial.print("mac addres: ");
+        Serial.println(WiFi.macAddress());
+      }
     }
   }
   else {SoftAP_init();}
 
-  Serial.println("softAP " + str_soft_ap);
-  Serial.println("DHSP " + str_dhsp);
+  if(DEBUG){
+    Serial.println("softAP " + wifi_settings.str_soft_ap);
+    Serial.println("DHSP " + wifi_settings.str_dhsp);
+  }
 
 // --------------------------------------------------------------Настройка WEB--------------------------------------------------------------------------------------------
   if(SPIFFS.begin()){    //-----Mount FileSystem
@@ -146,13 +177,13 @@ void setup() {
 
     server.on("/getethsetting", HTTP_ANY, [](AsyncWebServerRequest *request){ //-----------Отправляем данные настройки сети
       String str_json = "";
-      netBuf["ip"]= NVS.getString("ip").length() ? NVS.getString("ip") : getStringNetworAddress(ip);
-      netBuf["gateway"]= NVS.getString("gateway").length() ? NVS.getString("gateway") : getStringNetworAddress(gateway);
-      netBuf["subnet"]= NVS.getString("subnet").length() ? NVS.getString("subnet") : getStringNetworAddress(subnet);
-      netBuf["wifimode"]= str_soft_ap;
-      netBuf["dhsp"]= str_dhsp;
-      netBuf["ssdp_name"]= ssdp_name;
-      netBuf["ssid"]= str_ssid;
+      netBuf["ip"]= NVS.getString("ip").length() ? NVS.getString("ip") : getStringNetworAddress(wifi_settings.ip);
+      netBuf["gateway"]= NVS.getString("gateway").length() ? NVS.getString("gateway") : getStringNetworAddress(wifi_settings.gateway);
+      netBuf["subnet"]= NVS.getString("subnet").length() ? NVS.getString("subnet") : getStringNetworAddress(wifi_settings.subnet);
+      netBuf["wifimode"]= wifi_settings.str_soft_ap;
+      netBuf["dhsp"]= wifi_settings.str_dhsp;
+      netBuf["host_name"]= wifi_settings.host_name;
+      netBuf["ssid"]= wifi_settings.str_ssid;
       netBuf["sofApIp"] = WiFi.softAPIP().toString();
       netBuf["versionProsh"] = version_prosh;
       serializeJsonPretty(netBuf,str_json);
@@ -212,7 +243,7 @@ void setup() {
 
 //--------------------------------------HTTP server подключение----------------------------------------------------------------------------------------------------------- 
   server.begin();
-  Serial.println("HTTP server started");
+  if(DEBUG)Serial.println("HTTP server started");
 }
 
 void loop() {

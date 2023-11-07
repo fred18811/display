@@ -9,6 +9,22 @@
         "regex": "cpp",
         "utility": "cpp",
         "string": "cpp",
-        "sstream": "cpp"
-    }
+        "sstream": "cpp",
+        "*.tcc": "cpp",
+        "chrono": "cpp",
+        "deque": "cpp",
+        "vector": "cpp",
+        "optional": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "mutex": "cpp",
+        "ostream": "cpp",
+        "ratio": "cpp",
+        "type_traits": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "random": "cpp",
+        "iomanip": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

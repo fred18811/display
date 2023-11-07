@@ -2,6 +2,9 @@
 #include <WiFi.h>
 #include "ESPAsyncWebServer.h"
 #include "page.h"
+
+#ifndef _IOTFUNCTIONS_H
+#define _IOTFUNCTIONS_H
 //-------------------------------------------------------------Получение температуры--------------------------------------------------------------------------------------
 double GetTempFromTermistor(int termistor) {
   double Vout, Rt = 0;
@@ -75,3 +78,5 @@ void SoftAP_init(void){
         Serial.print("AP IP address: ");
         Serial.println(myIP);
      }
+
+#endif // _IOTFUNCTIONS_H

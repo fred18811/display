@@ -1,6 +1,10 @@
 //Добавить возможностьизменнения MAC
 //HostName не понятно нужен ли
 
+// Дописать analyseString
+//Сделать StaticJsonDocument и добавлять туда новые устройста
+//Организовать ппооверку при получении запроса добавленных устройств
+
 #include <Arduino.h>
 #include "ArduinoNvs.h"
 #include <math.h>
@@ -12,23 +16,26 @@
 #include <ESP32httpUpdate.h>        //!!!!! под вопросом
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <myfunction.h>
+#include <IoTFunction.h>
 #include <settings.h>
 #include <Bounce2.h>
-#include <webserverfunc.h>
-#include <MyClassWachDog.h>
+#include <WebServerFunc.h>
+#include <IoTClassWachDog.h>
 //#include <MyClassDisplayDwin.h>
-#include <MyClassTimer.h>
+#include <IoTClassTimer.h>
+#include <IoTClassUdpConnector.h>
+
+#define DEBUG 1 //-----Режим отладки
 
 String version_prosh ="0.1b";//------Версия прошивки
-//-------------------------------------------------------------Режим отладки---------------------------------------------------------------------------------------
-const bool DEBUG = 1;
+
+IoTTimer mytime(2);
 //--------------------------------------------------------------WachDog--------------------------------------------------------------------------------------------
 MyWachDog wachdog(whatchdog);
 //--------------------------------------------------------------Определение кнопки---------------------------------------------------------------------------------
 Bounce debouncer = Bounce();
 //--------------------------------------------------------------Хранение данных------------------------------------------------------------------------------------
-MyTimer rest_esp(2);
+IoTTimer rest_esp(2);
 //--------------------------------------------------------------Сетевые настройки WIFI-----------------------------------------------------------------------------
 struct
 {
@@ -42,12 +49,19 @@ String str_dhsp = "On";
 } wifi_settings;
 uint8_t newMACAddress[] = {0x32, 0xAE, 0xA4, 0x07, 0x0D, 0x60};
 //--------------------------------------------------------------Настройка UDP-------------------------------------------------------------------------------------
-WiFiUDP Udp;
-struct{
-unsigned int localUdpPort = 4210;
-char incomingPacket[255];
-char  replyPacket[14] = "SmartESPHello";
-} udp_settings;
+// WiFiUDP Udp;
+// IoTTimer timerUdp;
+// const int size_packet = 15;
+// struct
+// {
+// uint8_t brodcast[4] = {255,255,255,255};
+// const char replyPacket[size_packet] = "SmartESPOk";
+// unsigned int localUdpPort = 4210;
+// char incomingPacket[size_packet];
+// const char askPacket[size_packet] = "SmartESPHello";
+// } udp_settings;
+
+IoTClassUdpConnector UdpConnector(4210); 
 //--------------------------------------------------------------переменные для MQTT--------------------------------------------------------------------------------
 const char* ipmqtt = "0.0.0.0";
 const char* CLIENT_ID = "Display";
@@ -60,7 +74,10 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 //AsyncEventSource events("/events");
 
-StaticJsonDocument<400> netBuf;
+StaticJsonDocument<400> netBuf; //Буфер хранения настроек сети
+
+DynamicJsonDocument netDevices(2048);
+JsonArray arrayNetDevices = netDevices.to<JsonArray>(); //Массив Хранения опрошенных сетевых устройств
 
 void setup() {
 
@@ -98,18 +115,20 @@ void setup() {
   if(wifi_settings.str_soft_ap == "Off"){                                              //-----Проверяем состояние параметра
     if((digitalRead(btn_reset) == LOW)){                            //-----Сбрасываем параметр wifimode для перехода точки в режим AP
       NVS.setString("wifimode", "On");
-      if(DEBUG)Serial.println("Please reboot module for coniguration");
+      #if DEBUG
+        Serial.println("Please reboot module for coniguration");
+      #endif
       ESP.restart();        
     }
     else{
       WiFi.mode(WIFI_STA);
-      if(DEBUG){
-        esp_wifi_set_mac(WIFI_IF_STA, &newMACAddress[0]);
+      #if DEBUG
+        //esp_wifi_set_mac(WIFI_IF_STA, &newMACAddress[0]);
         Serial.println();
         Serial.println("Connecting to ");
         Serial.println(ssid);
         Serial.println(pass);
-      }
+      #endif
       WiFi.setHostname(wifi_settings.host_name.c_str());
       WiFi.begin(ssid, pass);
 
@@ -122,18 +141,22 @@ void setup() {
           count_WIFI++;
           if(count_WIFI>=60){ESP.restart();}
           else{
-            if(DEBUG)Serial.print(".");
+            #if DEBUG
+              Serial.print(".");
+            #endif
             }
         }
         else{
           NVS.setString("wifimode", "On");
-          if(DEBUG)Serial.println("reboot awp");
-          if(DEBUG)Serial.println("Reboot");
+          #if DEBUG
+            Serial.println("reboot awp");
+            Serial.println("Reboot");
+          #endif
           ESP.restart();
         }
       }
 
-      if(DEBUG){
+      #if DEBUG
         Serial.println("");
         Serial.println("WiFi connected");
 
@@ -151,15 +174,21 @@ void setup() {
 
         Serial.print("mac addres: ");
         Serial.println(WiFi.macAddress());
-      }
+      #endif
     }
   }
   else {SoftAP_init();}
 
-  if(DEBUG){
+  #if DEBUG
     Serial.println("softAP " + wifi_settings.str_soft_ap);
     Serial.println("DHSP " + wifi_settings.str_dhsp);
-  }
+  #endif
+//--------------------------------------------------------Инициалтзация UDP-----------------------------------------------------------------------------------------------
+  // Udp.begin(udp_settings.localUdpPort);
+  // #if DEBUG
+  //   Serial.printf("Now listening at IP %s, UDP port %d\n", WiFi.localIP().toString().c_str(), udp_settings.localUdpPort);
+  // #endif
+  UdpConnector.start(5,5,WiFi.macAddress());
 
 // --------------------------------------------------------------Настройка WEB--------------------------------------------------------------------------------------------
   if(SPIFFS.begin()){    //-----Mount FileSystem
@@ -243,9 +272,12 @@ void setup() {
 
 //--------------------------------------HTTP server подключение----------------------------------------------------------------------------------------------------------- 
   server.begin();
-  if(DEBUG)Serial.println("HTTP server started");
+  #if DEBUG
+    Serial.println("HTTP server started");
+  #else
+    Serial.println("System start");
+  #endif
 }
-
 void loop() {
 //-------------------------------------------------Перевод модуля в режим конфигурации путем замыкания GPIO0 на массу-----------------------------------------------------
   // if((digitalRead(btn_reset) == LOW)){
@@ -259,42 +291,52 @@ void loop() {
   //   }
   // }
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
-  // if(netBuf["wifimode"] == "Off"){
+
   client.loop();
   wachdog.loop();
+  UdpConnector.loop(arrayNetDevices); // Опрос устройст широковещанием и прием запросов
+  mytime.loop([](){
+    for (JsonVariant value : arrayNetDevices) {
+            Serial.println(value.as<String>());
+        }
+  });
+
+          
+  // timerUdp.loop([](){
+  //   Udp.beginPacket(udp_settings.brodcast,udp_settings.localUdpPort);
+  //   Udp.printf(udp_settings.askPacket);
+  //   Udp.endPacket();
+  //   Serial.println("timerUdp");
+  //   timerUdp.stopTimer();
+  // },5,5);
+
+  // int packetSize = Udp.parsePacket();
+  // if (packetSize){
+  //   #if DEBUG
+  //     Serial.println("UDP Start parse");
+  //   #endif
+  //   int len = packetSize+1 <= size_packet ? Udp.read(udp_settings.incomingPacket, size_packet) : 0;
+
+  //   if(String(udp_settings.incomingPacket) == String(udp_settings.replyPacket)){ // На запрос делаем что-то
+  //     #if DEBUG
+  //       Serial.printf("UDP replyPacket: %s\n", udp_settings.incomingPacket);
+  //     #endif
+  //   }
+  //   else if (String(udp_settings.incomingPacket) == String(udp_settings.askPacket)){ // Отправляем подтверждение на запрос!!
+  //     #if DEBUG
+  //       Serial.printf("UDP ask Packet: %s\n", udp_settings.incomingPacket);
+  //     #endif
+  //     Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+  //     Udp.printf(udp_settings.replyPacket);
+  //     Udp.endPacket();
+  //   }
+  //   memset(&udp_settings.incomingPacket, 0, sizeof(udp_settings.incomingPacket));
+  //   Udp.flush();
+  // }
 
 //------------------------отправка данных клиенту вебсокет-------------------------------------------------------
   //Проверить!!!!!!!
   // if(pechka.startTimerEvents()){
   //   ws.textAll(pechka.getDataFromDigitals());
   //   }
-
-//----------------------work Uart-------------------------------------------------------------------
-  // if(myNextion.loop()){
-  //   if(myNextion.getDataParam() == "state"){
-
-  //     myNextion.sendDataToNextionStr("temp.txt",String(pechka.getTemp("ds"))+"C");
-
-  //     if(pechka.getStatusRele("cooler")) myNextion.sendDataToNextionVal("cooler.pic","1");
-  //     else myNextion.sendDataToNextionVal("cooler.pic","2");
-
-  //     if(pechka.getStatusRele("shnek")) myNextion.sendDataToNextionVal("shnek.pic","1");
-  //     else myNextion.sendDataToNextionVal("shnek.pic","2");
-
-  //     if(pechka.getStatusRele("clear")) myNextion.sendDataToNextionVal("clear.pic","1");
-  //     else myNextion.sendDataToNextionVal("clear.pic","2");
-
-  //     if(pechka.getStatusRele("svecha")) myNextion.sendDataToNextionVal("cabdle.pic","1");
-  //     else myNextion.sendDataToNextionVal("cabdle.pic","2");
-
-  //     if(pechka.getStatusFotosensor()) myNextion.sendDataToNextionVal("controlPellets.pic","1");
-  //     else myNextion.sendDataToNextionVal("controlPellets.pic","2");
-
-  //     if(pechka.getStatusWorkPechka()) myNextion.sendDataToNextionVal("work.pic","1");
-  //     else{ 
-  //       myNextion.sendDataToNextionVal("controlPellets.pic","2");
-  //       myNextion.sendDataToNextionVal("work.pic","2");
-  //       }
-  //   }
-  // }
 }

@@ -1,4 +1,4 @@
-#include <MyClassDisplayDwin.h>
+#include <IoTClassDisplayDwin.h>
 
 class DisplayDwin;
 

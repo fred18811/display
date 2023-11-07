@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+#ifndef _PAGE_H
+#define _PAGE_H
 /*
 //----------------------------------------------------------------Сохранение настроек MQTT------------------------------------------------------------------------
 void handleSaveSettingMQTT(String webPage){
@@ -99,3 +101,5 @@ String clearflash(){
   webPage += "</body></html>";
   return webPage;
   }
+
+  #endif // _PAGE_H

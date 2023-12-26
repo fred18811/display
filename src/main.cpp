@@ -5,6 +5,10 @@
 //Сделать StaticJsonDocument и добавлять туда новые устройста
 //Организовать ппооверку при получении запроса добавленных устройств
 
+//Из веб в разделе dwin сделать кнопку отправки комманд на экран
+//Из веб в разделе dwin сделать кнопку сохранения настроек
+//Пережавать жанные их dwin на веб
+
 #include <Arduino.h>
 #include "ArduinoNvs.h"
 #include <math.h>
@@ -20,8 +24,8 @@
 #include <settings.h>
 #include <Bounce2.h>
 #include <WebServerFunc.h>
+#include <DWIN.h>
 #include <IoTClassWachDog.h>
-//#include <MyClassDisplayDwin.h>
 #include <IoTClassTimer.h>
 #include <IoTClassUdpConnector.h>
 
@@ -29,7 +33,7 @@
 
 String version_prosh ="0.1b";//------Версия прошивки
 
-IoTTimer mytime(2);
+//IoTTimer mytime(2); //Для теста чего-то (так не нужен)
 //--------------------------------------------------------------WachDog--------------------------------------------------------------------------------------------
 MyWachDog wachdog(whatchdog);
 //--------------------------------------------------------------Определение кнопки---------------------------------------------------------------------------------
@@ -49,24 +53,14 @@ String str_dhsp = "On";
 } wifi_settings;
 uint8_t newMACAddress[] = {0x32, 0xAE, 0xA4, 0x07, 0x0D, 0x60};
 //--------------------------------------------------------------Настройка UDP-------------------------------------------------------------------------------------
-// WiFiUDP Udp;
-// IoTTimer timerUdp;
-// const int size_packet = 15;
-// struct
-// {
-// uint8_t brodcast[4] = {255,255,255,255};
-// const char replyPacket[size_packet] = "SmartESPOk";
-// unsigned int localUdpPort = 4210;
-// char incomingPacket[size_packet];
-// const char askPacket[size_packet] = "SmartESPHello";
-// } udp_settings;
-
 IoTClassUdpConnector UdpConnector(4210); 
 //--------------------------------------------------------------переменные для MQTT--------------------------------------------------------------------------------
 const char* ipmqtt = "0.0.0.0";
 const char* CLIENT_ID = "Display";
 //--------------------------------------------------------------Счетчик попыток подключения к wifi
 int count_WIFI = 0;
+//--------------------------------------------------------------Настройка дисплея----------------------------------------------------------------------------------
+DWIN hmi(DGUS_SERIAL, rx2, tx2, DGUS_BAUD);
 //--------------------------------------------------------------настройки WEB Server-------------------------------------------------------------------------------
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -75,6 +69,7 @@ AsyncWebSocket ws("/ws");
 //AsyncEventSource events("/events");
 
 StaticJsonDocument<400> netBuf; //Буфер хранения настроек сети
+StaticJsonDocument<2048> dwinBuf; //Буфер хранения настроек элементов экрана dwin
 
 DynamicJsonDocument netDevices(2048);
 JsonArray arrayNetDevices = netDevices.to<JsonArray>(); //Массив Хранения опрошенных сетевых устройств
@@ -192,18 +187,19 @@ void setup() {
 
 // --------------------------------------------------------------Настройка WEB--------------------------------------------------------------------------------------------
   if(SPIFFS.begin()){    //-----Mount FileSystem
+
+    File json_setting_dwin = SPIFFS.open("/data/dwin.json", FILE_READ); //Загружаем настройки dwin
+    if(json_setting_dwin && json_setting_dwin.size()){
+        deserializeJson(dwinBuf, json_setting_dwin);
+    }
+
     ws.onEvent(onWsEvent);
     server.addHandler(&ws);
 
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html").setCacheControl("max-age=10");
     server.on("/setting", HTTP_ANY, [](AsyncWebServerRequest *request){request->send(SPIFFS, "/setting.html", "text/html");});
     server.on("/settingmqtt", HTTP_ANY, [](AsyncWebServerRequest *request){request->send(SPIFFS, "/settingmqtt.html", "text/html");});
-    server.on("/config.json", HTTP_ANY, [](AsyncWebServerRequest *request){
-      AsyncWebServerResponse *response = request->beginResponse(SPIFFS, "/config.json", "text/json");
-      response->addHeader("Cache-Control", "max-age=0");
-      request->send(response);
-    });
-
+    server.on("/settingdwin", HTTP_ANY, [](AsyncWebServerRequest *request){request->send(SPIFFS, "/settingdwin.html", "text/html");});
     server.on("/getethsetting", HTTP_ANY, [](AsyncWebServerRequest *request){ //-----------Отправляем данные настройки сети
       String str_json = "";
       netBuf["ip"]= NVS.getString("ip").length() ? NVS.getString("ip") : getStringNetworAddress(wifi_settings.ip);
@@ -222,6 +218,20 @@ void setup() {
       request->send(200, "text/html", handleSaveSettingEth(NVS, request));
       ESP.restart();
     });
+    server.on("/getdwinsetting", HTTP_ANY, [](AsyncWebServerRequest *request){ //-----------Отправляем данные настройки dwin
+      String str_json = "";
+      serializeJsonPretty(dwinBuf,str_json);
+      request->send(200, "text/html", str_json);
+    });
+    server.on("/getdwinreq", HTTP_GET, [](AsyncWebServerRequest *request){ //-----------Отправляем данные по запросу get dwin
+      int args = request->args();
+      for(int i=0;i<args;i++){
+          if(request->argName(i) == "page"){
+            byte page = hmi.getPage();
+            request->send(200, "text/html", "{\"page\":" + String(page) + "}");
+          }
+      }
+    });
     /*
     server.on("/savepechka", HTTP_ANY, [](AsyncWebServerRequest *request){
       request->send(200, "text/html", handleSaveSettingPechka(pechkaBuf, request));
@@ -238,7 +248,7 @@ void setup() {
         }
         request->send(404);
     });
-    server.on("/sentdata", HTTP_ANY, [](AsyncWebServerRequest *request){
+    server.on("/sentdata", HTTP_ANY, [](AsyncWebServerRequest *request){ // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!???????????????????
       int args = request->args();
       if(request->argName(0) == "controlsetting"){
         for(int i=1;i<args;i++){
@@ -277,6 +287,9 @@ void setup() {
   #else
     Serial.println("System start");
   #endif
+
+  //-----------------------------------------Настраиваем дисплей-------------------------------------------------------
+  hmi.echoEnabled(false);
 }
 void loop() {
 //-------------------------------------------------Перевод модуля в режим конфигурации путем замыкания GPIO0 на массу-----------------------------------------------------
@@ -295,48 +308,16 @@ void loop() {
   client.loop();
   wachdog.loop();
   UdpConnector.loop(arrayNetDevices); // Опрос устройст широковещанием и прием запросов
-  mytime.loop([](){
-    for (JsonVariant value : arrayNetDevices) {
-            Serial.println(value.as<String>());
-        }
+  hmi.hmiCallBack([](String address, int lastByte, String message, String response){
+    if(address.toInt() < 10000){ //Может задублироваться и быть не верный address
+      Serial.println("OnEvent : [ A : " + address + " | D : "+ String(lastByte, DEC) + " R: " + response +" ]");
+      ws.textAll("{\"address\":" + address + ",\"data\":" + String(lastByte, DEC)  +"}" );
+    }
   });
-
-          
-  // timerUdp.loop([](){
-  //   Udp.beginPacket(udp_settings.brodcast,udp_settings.localUdpPort);
-  //   Udp.printf(udp_settings.askPacket);
-  //   Udp.endPacket();
-  //   Serial.println("timerUdp");
-  //   timerUdp.stopTimer();
-  // },5,5);
-
-  // int packetSize = Udp.parsePacket();
-  // if (packetSize){
-  //   #if DEBUG
-  //     Serial.println("UDP Start parse");
-  //   #endif
-  //   int len = packetSize+1 <= size_packet ? Udp.read(udp_settings.incomingPacket, size_packet) : 0;
-
-  //   if(String(udp_settings.incomingPacket) == String(udp_settings.replyPacket)){ // На запрос делаем что-то
-  //     #if DEBUG
-  //       Serial.printf("UDP replyPacket: %s\n", udp_settings.incomingPacket);
-  //     #endif
-  //   }
-  //   else if (String(udp_settings.incomingPacket) == String(udp_settings.askPacket)){ // Отправляем подтверждение на запрос!!
-  //     #if DEBUG
-  //       Serial.printf("UDP ask Packet: %s\n", udp_settings.incomingPacket);
-  //     #endif
-  //     Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-  //     Udp.printf(udp_settings.replyPacket);
-  //     Udp.endPacket();
-  //   }
-  //   memset(&udp_settings.incomingPacket, 0, sizeof(udp_settings.incomingPacket));
-  //   Udp.flush();
-  // }
-
-//------------------------отправка данных клиенту вебсокет-------------------------------------------------------
-  //Проверить!!!!!!!
-  // if(pechka.startTimerEvents()){
-  //   ws.textAll(pechka.getDataFromDigitals());
-  //   }
+  hmi.listen();
+  // mytime.loop([](){
+  //   hmi.setVP(0x5001,0x82);
+  //   hmi.setVP(0x5000,0xff);
+  //   hmi.setVP(0x7000,0x32);
+  // });
 }

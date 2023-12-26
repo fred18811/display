@@ -6,5 +6,10 @@ export const helpFunctions = {
     },
     addEventCheckChecked: (el, param) => {
         if(el) el.addEventListener("change", ()=> helpFunctions.checkChecked(el.value,param))
-    }
+    },
+    convertStringToHTML: (str) => {
+        let res = document.createElement('template');
+        res.innerHTML = str;
+        return res.content;
+     }
 }

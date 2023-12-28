@@ -1,5 +1,5 @@
 import { helpFunctions } from "./helpFunctions.js";
-import { formElementButtns, formContent, searchElementForm, addNewElement } from "./htmlelements.js";
+import { formElementButtns, formContent, searchElementForm, addNewElement} from "./htmlelements.js";
 
 window.addEventListener("load",loader);
 function loader() {
@@ -25,13 +25,14 @@ function loader() {
  
 //-------------------Принимаем данные от сервера------------------------------------------------------------
     if(document.title == "Настройки DWIN"){
-        const request_settings = fetch("/getdwinsetting",{'Cache-Control': 'no-cache'}); //Запрос к серверу, получение данных элементов (Исправить)
-        // const request_settings = fetch("/data/dwin.json",{'Cache-Control': 'no-cache'});
+        //const request_settings = fetch("/getdwinsetting",{'Cache-Control': 'no-cache'}); //Запрос к серверу, получение данных элементов (Исправить)
+        const request_settings = fetch("/data/dwin.json",{'Cache-Control': 'no-cache'});
         request_settings
         .then(response=>response.json())
         .then(data=> {
-            if(document.querySelector("#dwinform"))
+            if(document.querySelector("#dwinform")){
                 document.querySelector("#dwinform").append(formContent(data));
+            }
             if(document.querySelector("#dwinformbuttons")) 
                 document.querySelector("#dwinform").append(formElementButtns());
         });

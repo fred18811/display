@@ -4,14 +4,16 @@ const page = 0;
 
 //Здесь создаем элементы dwin
 const formElement = (page, index, props)=> {
-    const {
-        address, 
-        data
-    } = props;
-    
-    const name = props.name ? props.name : "Новое имя";
+    const name =  props && props.name ? props.name : "Новое имя";
+    const address = props && props.address ? props.address : "";
+    const data = props && props.data ? props.data : "";
+
     function getData (e) {
         const element = e.target;
+
+        if(e.target.name === "address") {
+            e.target.parentElement.setAttribute("addressform",e.target.value)
+        };
         //Получаем свойста элемента
         const elDwinParams = document.querySelectorAll(`input[page="${element.getAttribute("page")}"][index="${element.getAttribute("index")}"]:not([type="button"])`);
         const objEl = {};
@@ -24,18 +26,29 @@ const formElement = (page, index, props)=> {
         objPage.data[element.getAttribute("index")] = objEl;
         //записываем объект страницы в массив
         arrSend[element.getAttribute("page")] = objPage;
+        //console.log(objPage)
+        //console.log(objEl)
     }
     function sendData (e) {
         //console.log(e.target);
     }
 
+    function deletingObj (e) {
+        e.target.parentElement.remove();
+    }
     const divElement = document.createElement("div");
     divElement.addEventListener("click",(e=>activateDiv(e.currentTarget)));
     divElement.classList.add("edit-form-element", "edit-form-column");
     divElement.id = `dwinelement${page}${index}`;
     divElement.setAttribute("addressform",address);
     divElement.setAttribute("index",index);
-
+    
+    //Создаем удаление объекта
+    const deleteObj = document.createElement("p");
+    deleteObj.innerHTML = "x";
+    deleteObj.addEventListener("click", (e) => deletingObj(e));
+    deleteObj.setAttribute('style', 'text-align:end;cursor: pointer;font-size: 16px;');
+    divElement.append(deleteObj); 
     //Создаем input name
     const inputName = document.createElement("input");
     inputName.type="text";
@@ -106,7 +119,24 @@ const formElementPage = (page)=> {
     divElement.append(divContent);
     return divElement;
 }
+//Кнопка добавления нового элемента
+const buttonCreatNewElement = () => {
+    function addingButtns (){
+        if(!document.querySelector('div[addressform=""]')) addNewElement();
+    };
 
+    const divButton = document.createElement("div");
+    divButton.classList.add("edit-form", "edit-form-column", "edit-form-position-center");
+    divButton.setAttribute("buttonCreat","");
+
+    const button = document.createElement("div");
+    button.classList.add("button-add");
+    button.innerHTML = "+";
+    button.addEventListener("click", () => addingButtns());
+    divButton.append(button);
+    divButton.setAttribute('style', 'width: 253px; height: 199px; align-items: center;');
+    return divButton
+}
 // Сюда приход запрос с сервера по data dwin
 export const formContent = (arrElemntsDwin)=> {
     const divElement = document.createElement("div");
@@ -117,6 +147,7 @@ export const formContent = (arrElemntsDwin)=> {
     arrElemntsDwin.forEach((element, id) =>{
         formContent.append(formElement(page,id,element))
     })
+    formContent.append(buttonCreatNewElement());
     divElement.append(elPage);
     return divElement;
 }
@@ -153,12 +184,14 @@ export const addNewElement = (resalt) => {
 const selsectingElement = (el, page, resalt) => {
     if(el){
         const elements = el.querySelectorAll('div [addressform]');
-        const index = elements[elements.length-1].getAttribute("index");
+        const index = elements[elements.length-1] ? elements[elements.length-1].getAttribute("index") : -1;
         const elForm = formElement(page,Number(index)+1, resalt);
         elForm.classList.add("edit-form-select");
         removingSelect();
         objselect.obj = elForm;
-        el.append(elForm);
+        const lastChildren = el.querySelector('div[buttoncreat]');
+        el.insertBefore(elForm, lastChildren);
+        //el.append(elForm);
     }
     else {
         const pageContent = document.querySelector(`div[pagecontent]`);

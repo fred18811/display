@@ -25,6 +25,22 @@ input[type="number"] {
 #host_name {
     color:white;
 }
+.button-add {
+    height: 50px;
+    width: 50px;
+    font-size: 74px;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 50% !important;
+    border: 2px solid white;
+}
+.button-add:hover{
+    border: 2px solid gray;
+    color: gray;
+}
 .edit-form {
     display: flex;
     /* align-items: center; */

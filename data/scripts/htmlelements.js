@@ -30,7 +30,15 @@ const formElement = (page, index, props)=> {
         //console.log(objEl)
     }
     function sendData (e) {
-        //console.log(e.target);
+        const index = e.target.getAttribute("index");
+        const page = e.target.getAttribute("page");
+        const addressValue = document.querySelector(`input[id="address${page}${index}"]`).value;
+        const dataValue = document.querySelector(`input[id="data${page}${index}"]`).value;
+        const request_settings = fetch(`/getdwinreq?address=${addressValue}&data=${dataValue}`,{'Cache-Control': 'no-cache'});
+        request_settings
+            .then(resp=>{
+                if(resp.status !=  200) console.log(1);
+            });
     }
 
     function deletingObj (e) {

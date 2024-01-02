@@ -33,7 +33,7 @@
 
 String version_prosh ="0.1b";//------Версия прошивки
 
-//IoTTimer mytime(2); //Для теста чего-то (так не нужен)
+IoTTimer mytime(2); //Для теста чего-то (так не нужен)
 //--------------------------------------------------------------WachDog--------------------------------------------------------------------------------------------
 MyWachDog wachdog(whatchdog);
 //--------------------------------------------------------------Определение кнопки---------------------------------------------------------------------------------
@@ -224,13 +224,22 @@ void setup() {
       request->send(200, "text/html", str_json);
     });
     server.on("/getdwinreq", HTTP_GET, [](AsyncWebServerRequest *request){ //-----------Отправляем данные по запросу get dwin
-      int args = request->args();
-      for(int i=0;i<args;i++){
-          if(request->argName(i) == "page"){
-            byte page = hmi.getPage();
-            request->send(200, "text/html", "{\"page\":" + String(page) + "}");
-          }
-      }
+      if(request->hasArg("address")) {
+        long address_get = (long) strtol(request->arg(0u).c_str(), 0, 16);
+        byte data_get = byte(atoi(request->arg(1).c_str()));
+        hmi.setVP(address_get,data_get);
+
+        request->send(200, "text/html", "Ok");
+      } 
+      // int args = request->args();
+      // for(int i=0;i<args;i++){
+      //     Serial.println(request->argName(i));
+      //     if(request->argName(i) == "page"){
+      //       byte page = hmi.getPage();
+      //       request->send(200, "text/html", "{\"page\":" + String(page) + "}");
+      //     }
+      // }
+      request->send(404);
     });
     /*
     server.on("/savepechka", HTTP_ANY, [](AsyncWebServerRequest *request){
@@ -316,8 +325,8 @@ void loop() {
   });
   hmi.listen();
   // mytime.loop([](){
+  //   Serial.println("timer");
   //   hmi.setVP(0x5001,0x82);
   //   hmi.setVP(0x5000,0xff);
-  //   hmi.setVP(0x7000,0x32);
   // });
 }

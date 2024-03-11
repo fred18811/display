@@ -1,3 +1,3 @@
-[
-    {"address":5001,"name":"СветПраво","data":100}
-]
+[{"elcheckbox": true, "name":"СветПраво","typebtn":"Button", "likeBtn": true, "likeDimmer": true, "address":"5001","dataDeafult":"10","tempValue":"0","urllink":"http://192.168.44.10/sec/?cmd=","ports":"12;","minValue":0,"maxValue":255},
+{"elcheckbox": true,"name":"Новое имя","typebtn":"Button","likeBtn": true, "likeDimmer": true,"address":"5000","dataDeafult":"100","tempValue":"0","urllink":"http://192.168.44.10/sec/?cmd=","ports":"10;","minValue":0,"maxValue":255},
+{"elcheckbox": true,"name":"Температера","typebtn":"Button","address":"5001","likeBtn": true, "likeDimmer": true, "dataDeafult":"0","tempValue":"0","urllink":"http://192.168.44.10/sec/?cmd=","ports":"","minValue":0,"maxValue":255}]

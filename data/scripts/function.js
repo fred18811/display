@@ -1,93 +1,15 @@
-import { helpFunctions } from "./helpFunctions.js";
-import { formElementButtns, formContent, searchElementForm, addNewElement} from "./htmlelements.js";
+import { helpFunctions } from "./helpfunctions.js";
+import { diwiwidget } from "./dwinwidget.js";
 
 window.addEventListener("load",loader);
 function loader() {
     // ----------------------------------------
-    const arrElemntsDwin = [{page:0, data:[  // здесь запрашиваем сохраненные данные из esp32
-        {address:5000, name:"СветЛево", data:255},
-        {address:5001, name:"СветПраво", data:100},
-        {address:7000, name:"НаваниеКомнаты", data:"Комната"}]}
-    ,
-    {page:1, data:[ 
-        {address:5002, name:"ЯркостьЭкрана", data:100},
-        {address:5003, name:"Звук", data:0}]}
-    ];
-
-    // ----------------------------------------
-
-    // let mass_setting_controller = document.querySelectorAll('input[type="number"');
-    // let timerId = null;
-    // let dataJson ={}
-    let host_name = window.location.hostname;
-    let gateway = "ws://" + host_name + "/ws";
-    let websocket = new WebSocket(gateway);
+    const host_name = window.location.hostname;
+    const gateway = "ws://" + host_name + "/ws";
+    const websocket = new WebSocket(gateway);
  
-//-------------------Принимаем данные от сервера------------------------------------------------------------
-    if(document.title == "Настройки DWIN"){
-        //const request_settings = fetch("/getdwinsetting",{'Cache-Control': 'no-cache'}); //Запрос к серверу, получение данных элементов (Исправить)
-        const request_settings = fetch("/data/dwin.json",{'Cache-Control': 'no-cache'});
-        request_settings
-        .then(response=>response.json())
-        .then(data=> {
-            if(document.querySelector("#dwinform")){
-                document.querySelector("#dwinform").append(formContent(data));
-            }
-            if(document.querySelector("#dwinformbuttons")) 
-                document.querySelector("#dwinform").append(formElementButtns());
-        });
-
-        // websocket данные приходят с сервака-------------
-        // setTimeout(()=>{
-        //     let resalt = {address:5004,data:111};
-        //     if(!searchElementForm(resalt)) addNewElement(resalt);
-        // }, 1500);
-
-        // setTimeout(()=>{
-        //     let resalt = {address:5000,data:111};
-        //     if(!searchElementForm(resalt)) addNewElement(resalt);
-        // }, 2000);
-
-        // setTimeout(()=>{
-        //     let resalt = {address:5004,data:131};
-        //     if(!searchElementForm(resalt)) addNewElement(resalt);
-        // }, 3000);
-        // setTimeout(()=>{
-        //     let resalt = {address:5004,data:141};
-        //     if(!searchElementForm(resalt)) addNewElement(resalt);
-        // }, 4000);
-
-        websocket.onmessage = function(event){
-            const resalt = JSON.parse(event.data);
-            if(!searchElementForm(resalt)) addNewElement(resalt);
-        };
-        // -------------------------------------------------
-    }
-//------------------------------------------------------------------------------------------------------------
-//-------------------Отправляем измененные данные на сервер---------------------------------------------------
-    // for(i in mass_setting_controller){
-    //     if(mass_setting_controller[i].type == "number"){
-    //         mass_setting_controller[i].addEventListener("input",(e)=>{
-    //             dataJson[e.target.id] = e.target.value;
-    //             if(timerId){
-    //                 clearTimeout(timerId);
-    //                 timerId = null;
-    //             }
-    //             if(e.target.value){
-    //                 let stateBool = true;
-    //                 for (key in dataJson) {
-    //                     if(!dataJson[key]){
-    //                         stateBool = false;
-    //                         break;
-    //                     }
-    //                 }
-    //                 if(stateBool){
-    //                     timerId = setTimeout(sentData, 3000, dataJson);
-    //                 }
-    //             }
-    //         });
-    //     }
-    // }
+//------------------Виджеты на главную страницу------------------------------------------------------------
+diwiwidget(websocket);
 //-------------------Получаем настройки wifi от сервера-------------------------------------------------------
     if(document.getElementById("ethsettings") || document.getElementById("main")){
         let request_settings = fetch("/getethsetting",{'Cache-Control': 'no-cache'});
@@ -120,22 +42,3 @@ function loader() {
         response.then(res => res.statusText === "OK"? document.querySelector("h3.savemessage").classList.remove("disabled"):"");
     })
 }
-
-
-// function sentData(jsonData){
-//     let strdata = "";
-//     if(document.getElementById("controllersettings")){
-//         strdata = "controlsetting=1&";
-//     }
-//     for(i in jsonData){
-//         strdata += i;
-//         strdata += "=";
-//         strdata += parseInt(jsonData[i]);
-//         strdata += "&";
-//     }
-
-//     fetch('/sentdata', {
-//         method: 'POST',
-//         body: strdata
-//     })
-//       .catch(error => console.error(error));}

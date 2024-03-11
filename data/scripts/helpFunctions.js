@@ -11,5 +11,25 @@ export const helpFunctions = {
         let res = document.createElement('template');
         res.innerHTML = str;
         return res.content;
+     },
+     parsingHTMLElements: (element) => {
+        const parser = new DOMParser();
+        return parser.parseFromString(element, 'text/html').body.firstElementChild; 
+     },
+     proxyObj: (obj, func) => {
+        return new Proxy(obj, {
+            set: function (target, key, value) {
+                target[key] = value;
+                func();
+                return true;
+            },
+            get: function (target, prop)  {
+                if (prop in target) {
+                    return target[prop];
+                  } else {
+                    return 0;
+                  }
+            }
+        })
      }
 }

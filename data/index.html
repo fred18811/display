@@ -17,33 +17,15 @@
                         </div>
                 </div>
                 <div class="navbar">
-                    <div><a class="btn btn-secondary btn-lg" role="button" route href="setting">Настройка сети</a></div>
-                    <div><a class="btn btn-secondary btn-lg" role="button" route href="settingmqtt">Настройка MQTT</a></div>
-                    <div><a class="btn btn-secondary btn-lg" role="button" route href="settingdwin">Настройка дисплея DWIN</a></div>
-                    <div><a class="btn btn-secondary btn-lg" role="button" route href="update">Обновление прошивки</a></div>
+                    <div><a role="button" route href="setting">
+                            <img src="./icon/wifiSetting.png" alt="Настройки">
+                        </a>
+                    </div>
+                    <!-- <div><a class="btn btn-secondary btn-lg" role="button" route href="settingmqtt">Настройка MQTT</a></div> -->
+                    <!-- <div><a class="btn btn-secondary btn-lg" role="button" route href="update">Обновление прошивки</a></div> -->
                 </div>
             </div>
-            <div class="statisticval">
-                <!-- <div>
-                    <label for="deltaTempval">Ток шнека: </label>
-                    <input name="deltaTempval" id="cur_shnek" value="-" disabled>
-                </div>
-                <div>
-                    <label for="deltaTempval">Ток свечи: </label>
-                    <input name="deltaTempval" id="cur_svecha" value="-" disabled>
-                </div>
-                <div>
-                    <label for="deltaTempval">Ток очистки: </label>
-                    <input name="deltaTempval" id="cur_clear" value="-" disabled>
-                </div>
-                <div>
-                    <label for="deltaTempval">Датчик температуры: </label>
-                    <input name="deltaTempval" id="digit_temp" value="-" disabled>
-                </div>
-                <div>
-                    <label for="deltaTempval">Датчик огня: </label>
-                    <input name="deltaTempval" id="digit_fire" value="-" disabled>
-                </div> -->
-               </div>
+            <div id="widgets" class="main">
+            </div>
 		</body>
 </html>

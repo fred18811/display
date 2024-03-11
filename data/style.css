@@ -20,7 +20,7 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 .disabled{
-    display: none;
+    display: none !important;
 }
 #host_name {
     color:white;
@@ -40,6 +40,16 @@ input[type="number"] {
 .button-add:hover{
     border: 2px solid gray;
     color: gray;
+}
+.button-light {
+    width: 5px;
+    height: 90px;
+}
+.button-light-red {
+    background: red;
+}
+.button-light-green {
+    background: limegreen;
 }
 .edit-form {
     display: flex;
@@ -91,8 +101,17 @@ input[type="number"] {
 .edit-form-wrap {
     flex-wrap: wrap;
 }
+.edit-form-align-position-center {
+    align-items: center;
+}
 .edit-form-position-center {
     justify-content: center;
+}
+.edit-form-position-space-between {
+    justify-content: space-between;
+}
+.edit-form-position-end {
+    justify-content: end;
 }
 .edit-form-select {
     background-color: darkred;
@@ -100,12 +119,16 @@ input[type="number"] {
 .edit-form-width-100 {
     width: 100%;
 }
+.dimmer-input {
+    writing-mode: vertical-lr;
+    accent-color: whitesmoke;
+}
 .main{
     text-align: left;
     font-size: 14px;
     padding-top: 10px;
 }
-.main h1{
+.main h1, .main h2{
     color: white;
     text-align: center;
     margin-bottom: 10px;
@@ -197,12 +220,40 @@ input[type="number"] {
     border: none;
     outline:none;
 }
+
+.save-form {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.save-form div {
+    color: red;
+    margin-top: 50px;
+    height: fit-content;
+    background: white;
+    font-size: 36px;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+}
+
 label{
     display: block;
 }
 @media (max-width: 600px) {
     .navbar{
         grid-template-columns: 1fr 1fr;
+    }
+}
+@media (max-width: 500px) {
+    div[formcontent]{
+        flex-direction: column;
+        align-items: center;
     }
 }
 @media (max-width: 400px) {

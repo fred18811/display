@@ -15,6 +15,8 @@ export const formElement = (page, index, props)=> {
     const tempValue = props && props.tempValue ? props.tempValue : "";
     const minValue = props && props.minValue ? props.minValue : 0;
     const maxValue = props && props.maxValue ? props.maxValue : 0;
+    const timer = props && props.timer ? props.timer : 0;
+    const statePort = props && props.statePort ? props.statePort : "";
 
     function getPageIndex (e) {
         const index = e.target.getAttribute("index");
@@ -146,6 +148,7 @@ export const formElement = (page, index, props)=> {
         <hr>
         <h3>Данные контроллера</h3>
         <hr>
+
         <label for="urllink">URL адрес</label>
         <input linkPart type="text" name="urllink" id="urllink${page}${index}" page="${page}" index="${index}" value="${urlLink}">
 
@@ -154,6 +157,12 @@ export const formElement = (page, index, props)=> {
 
         <label for="portsData">Данные порт</label>
         <input linkPart type="text" name="tempValue" portsData id="portsData${page}${index}" page="${page}" index="${index}" value="${tempValue}">
+
+        <label for="timer">Время опроса состояния (сек.)</label>
+        <input linkPart type="number" name="timer" id="timer${page}${index}" page="${page}" index="${index}" value="${timer}">
+
+        <label for="statePort">Получить состояние порта</label>
+        <input linkPart type="text" name="statePort" id="statePort${page}${index}" page="${page}" index="${index}" value="${statePort}">
 
         <label for="lineRequest">Полученная строка запроса</label>
         <div style="margin:0;padding:0;display: flex;height: 31px;align-items: center;">

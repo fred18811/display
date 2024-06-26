@@ -91,10 +91,11 @@ const buttons = {
             let dataValue = 0;
             const arrBtn = document.querySelectorAll(`[address="${address}"][btnligth]`);
             const arrDimmer = document.querySelectorAll(`[address="${address}"][btnbutton]`);
-            const isRed = document.querySelector(`[address="${address}"][btnligth]`).classList.contains("button-light-red");
+            const isRed = document.querySelector(`[address="${address}"][btnligth]`) ? document.querySelector(`[address="${address}"][btnligth]`).classList.contains("button-light-red") : false;
 
             arrDimmer.forEach(i => {
                 if(e.target.hasAttribute("btnbox") || e.target.hasAttribute("btnligth")){
+                    console.log(1);
                     if(isRed) {
                         i.value = element.maxValue;
                         dataValue = element.maxValue;
@@ -130,7 +131,7 @@ const buttons = {
                 ${element.likeBtn ? `
                 <hr style="width: 100%;">
                 <div btnbox name="btn${page}${index}" page="${page}" index="${index}" style="flex:1; display: flex; align-items: end; width: 100%; height: 100%; justify-content: center;">
-                    <div btnligth class="button-light ${Number(element.tempValue) > 0 ? "button-light-green" : "button-light-red" }" address="${element.address}" name="btnligth${page}${index}" page="${page}" index="${index}"></div>
+                    <div btnbutton btnligth class="button-light ${Number(element.tempValue) > 0 ? "button-light-green" : "button-light-red" }" address="${element.address}" name="btnligth${page}${index}" page="${page}" index="${index}"></div>
                 </div>
                 ` : ""}
             </div>

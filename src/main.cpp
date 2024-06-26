@@ -7,7 +7,7 @@
 
 //Из веб в разделе dwin сделать кнопку отправки комманд на экран
 //Из веб в разделе dwin сделать кнопку сохранения настроек
-//Пережавать жанные их dwin на веб
+//Таймер опроса
 
 #include <Arduino.h>
 #include "ArduinoNvs.h"
@@ -62,8 +62,6 @@ const char* CLIENT_ID = "Display";
 int count_WIFI = 0;
 //--------------------------------------------------------------Настройка дисплея----------------------------------------------------------------------------------
 DisplayDwin hmi(DGUS_SERIAL, rx2, tx2, DGUS_BAUD);
-//--------------------------------------------------------------настройки WEB Client-------------------------------------------------------------------------------
-bool http_client_work = false; 
 //--------------------------------------------------------------настройки WEB Server-------------------------------------------------------------------------------
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -72,8 +70,6 @@ AsyncWebSocket ws("/ws");
 //AsyncEventSource events("/events");
 
 StaticJsonDocument<400> netBuf; //Буфер хранения настроек сети
-StaticJsonDocument<8192> dwinBuf; //Буфер хранения настроек элементов экрана dwin
-StaticJsonDocument<400> linkParam; //Буфер хранения временных настроек для url контроллера
 
 DynamicJsonDocument netDevices(2048);
 JsonArray arrayNetDevices = netDevices.to<JsonArray>(); //Массив Хранения опрошенных сетевых устройств
@@ -191,14 +187,13 @@ void setup() {
 
 // --------------------------------------------------------------Настройка WEB--------------------------------------------------------------------------------------------
   if(SPIFFS.begin()){    //-----Mount FileSystem
+    ws.onEvent(onWsEvent);
+    server.addHandler(&ws);
 
     File json_setting_dwin = SPIFFS.open("/data/dwin.json", FILE_READ); //Загружаем настройки dwin
     if(json_setting_dwin && json_setting_dwin.size()){
-        deserializeJson(dwinBuf, json_setting_dwin);
+      deserializeJson(hmi.dwinBuf, json_setting_dwin);
     }
-
-    ws.onEvent(onWsEvent);
-    server.addHandler(&ws);
 
     server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html").setCacheControl("max-age=10");
     server.on("/setting", HTTP_ANY, [](AsyncWebServerRequest *request){request->send(SPIFFS, "/setting.html", "text/html");});
@@ -224,90 +219,6 @@ void setup() {
       request->send(200, "text/html", handleSaveSettingEth(NVS, request));
       ESP.restart();
     });
-    //-------------------------------------------
-    server.on("/getdwinsetting", HTTP_ANY, [](AsyncWebServerRequest *request){ //-----------Отправляем клиенту данные настройки dwin
-      String str_json = "";
-      serializeJsonPretty(dwinBuf,str_json);
-      request->send(200, "text/html", str_json);
-    });
-    //-------------------------------------------
-    server.on("/savedwinsetting", HTTP_PUT, [](AsyncWebServerRequest *request){}, NULL,//-----------Сохраняем клиентские настройки dwin
-    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-      String req = String((char *)data);
-      //Пишем данные в буфер
-      dwinBuf.clear();
-      deserializeJson(dwinBuf,req);
-      //Пишем данные в файл
-      File fileDwin = SPIFFS.open ("/data/dwin.json",FILE_WRITE);
-      if(fileDwin) serializeJson(dwinBuf, fileDwin);
-      fileDwin.close();
-      request->send(200, "text/html", "Ok");
-    });
-    //-------------------------------------------
-     server.on("/sendlinkfromdwin", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,//-----------Получаем данные с dwin для отправки на контроллер
-    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
-      String req = String((char *)data);
-      deserializeJson(linkParam,req);
-      http_client_work = true;
-      request->send(200, "text/html", "Ok");
-    });
-    //-------------------------------------------
-    server.on("/getdwinreq", HTTP_GET, [](AsyncWebServerRequest *request){ //-----------Отправляем данные по запросу get dwin
-      if(request->hasArg("address") && request->hasArg("data")) {
-        long address_get = (long) strtol(request->arg(0u).c_str(), 0, 16);
-        byte data_get = byte(atoi(request->arg(1).c_str()));
-        hmi.setVP(address_get,data_get);
-
-        //-------------вынести в отдельную функцию-----
-        //---------------------------------------------
-        //---------------------------------------------
-        for(int i = 0; i<dwinBuf.size(); i++){
-          String str_address_buf = dwinBuf[i]["address"];
-          if(str_address_buf == request->arg(0u).c_str()){
-            String data = request->arg(1).c_str();
-            Serial.println(data);
-            dwinBuf[i]["tempValue"] = data;
-          }
-        }
-        //---------------------------------------------
-        //---------------------------------------------
-        //---------------------------------------------
-
-
-        request->send(200, "text/html", "Ok");
-      }
-      else if(request->hasArg("address")){
-        //-------------вынести в отдельную функцию-----
-        //---------------------------------------------
-        //---------------------------------------------
-        for(int i = 0; i<dwinBuf.size(); i++){
-          String str_address_buf = dwinBuf[i]["address"];
-          if(str_address_buf == request->arg(0u).c_str()){
-            String a = dwinBuf[i]["tempValue"];
-            Serial.println(a);
-            request->send(200, "text/html", dwinBuf[i]["tempValue"]);
-          }
-        }
-        //---------------------------------------------
-        //---------------------------------------------
-        //---------------------------------------------
-        request->send(200, "text/html", "null");
-        // Получаем состояние элемента из буфера
-      }
-      else{
-        request->send(200, "text/html", "Bad");
-      }
-      // int args = request->args();
-      // for(int i=0;i<args;i++){
-      //     Serial.println(request->argName(i));
-      //     if(request->argName(i) == "page"){
-      //       byte page = hmi.getPage();
-      //       request->send(200, "text/html", "{\"page\":" + String(page) + "}");
-      //     }
-      // }
-      request->send(404);
-    });
-   //-------------------------------------------
     server.on("/getdata", HTTP_ANY, [](AsyncWebServerRequest *request){
         int args = request->args();
         for(int i=0;i<args;i++){
@@ -327,6 +238,61 @@ void setup() {
         }
       }
       request->send(200);
+    });
+
+    //-------------------------------------------
+    //-------------------------------------------DWIN-------------------------------------------------------------------------------
+    server.on("/getdwinsetting", HTTP_ANY, [](AsyncWebServerRequest *request){ //-----------Отправляем клиенту данные настройки dwin
+      String str_json = "";
+      serializeJsonPretty(hmi.dwinBuf,str_json);
+      request->send(200, "text/html", str_json);
+    });
+    //-------------------------------------------
+    server.on("/savedwinsetting", HTTP_PUT, [](AsyncWebServerRequest *request){}, NULL,//-----------Сохраняем клиентские настройки dwin
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String req = String((char *)data);
+      //Пишем данные в буфер
+      hmi.dwinBuf.clear();
+      deserializeJson(hmi.dwinBuf,req);
+      //Пишем данные в файл
+      File fileDwin = SPIFFS.open ("/data/dwin.json",FILE_WRITE);
+      if(fileDwin) serializeJson(hmi.dwinBuf, fileDwin);
+      fileDwin.close();
+      request->send(200, "text/html", "Ok");
+    });
+    //-------------------------------------------
+    server.on("/sendlinkfromdwin", HTTP_POST, [](AsyncWebServerRequest *request){}, NULL,//-----------Получаем данные с dwin для отправки на контроллер !!!!!!!!!!!!
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String req = String((char *)data);
+      deserializeJson(hmi.linkParam,req);
+      hmi.setHTTPClientWork(true);
+      request->send(200, "text/html", "Ok");
+    });
+    //-------------------------------------------
+    server.on("/getdwinreq", HTTP_GET, [](AsyncWebServerRequest *request){ //-----------Отправляем данные по запросу get dwin
+      if(request->hasArg("address") && request->hasArg("data")) {
+        long address_get = (long) strtol(request->arg(0u).c_str(), 0, 16);
+        byte data_get = byte(atoi(request->arg(1).c_str()));
+        hmi.setVP(address_get,data_get);
+        hmi.setDwinBuf(request->arg(0u).c_str(), request->arg(1).c_str());
+        hmi.getDataFromDwin(request->arg(0u).c_str(), atoi(request->arg(1).c_str()));
+        request->send(200, "text/html", "Ok");
+      }
+      else if(request->hasArg("address")){
+        request->send(200, "text/html", hmi.setDwinBuf(request->arg(0u).c_str()));
+      }
+      else{
+        request->send(200, "text/html", "Bad");
+      }
+      // int args = request->args();
+      // for(int i=0;i<args;i++){
+      //     Serial.println(request->argName(i));
+      //     if(request->argName(i) == "page"){
+      //       byte page = hmi.getPage();
+      //       request->send(200, "text/html", "{\"page\":" + String(page) + "}");
+      //     }
+      // }
+      request->send(404);
     });
     //-------------------------------------------
     server.onNotFound(onRequest);   
@@ -361,7 +327,8 @@ void setup() {
   #endif
 
   //-----------------------------------------Настраиваем дисплей-------------------------------------------------------
-  hmi.echoEnabled(false);
+  //hmi.setup(&server, &hmi);
+  hmi.setup();
 }
 void loop() {
 //-------------------------------------------------Перевод модуля в режим конфигурации путем замыкания GPIO0 на массу-----------------------------------------------------
@@ -383,76 +350,14 @@ void loop() {
 
   hmi.hmiCallBack([](String address, int lastByte, String message, String response){
     if(address.toInt() < 10000){ //Может задублироваться и быть не верный address
-      Serial.println("OnEvent : [ A : " + address + " | D : "+ String(lastByte, DEC) + " R: " + response +" ]");
       ws.textAll("{\"address\":" + address + ",\"data\":" + String(lastByte, DEC)  +"}" );
-
-    //----------------------------------------------------
-      for(int i = 0; i<dwinBuf.size(); i++){
-        String str_address = dwinBuf[i]["address"];
-        if(str_address == address){
-          String url_link = dwinBuf[i]["urllink"];
-          String ports = dwinBuf[i]["ports"];
-          String ports_data = "";
-          String data = "";
-          int data_int = 0;
-
-          for(int j=0; j<ports.length(); j++){
-            if(ports.charAt(j) != ';'){
-              data = data + ports[j];
-            }
-            else {
-              data_int = data.toInt();
-              ports_data = String(data_int, DEC) + ":" + String(lastByte, DEC) + ";";
-              data = "";
-            }
-          }
-          Serial.println(ports_data);
-          String link = url_link + ports_data;
-          Serial.println(url_link);
-          Serial.println(link);
-
-          HTTPClient http;
-          http.begin(link.c_str());
-          int httpResponseCode = http.GET();
-          if (httpResponseCode<0){
-          //Если контроллер не доступен или что то пощло не так возвращаем обратно положение кнопки---------------------------------
-          Serial.println("notConnect");
-          http_client_work = false;
-          }
-          else {
-            http_client_work = false;
-            Serial.println("Connect");
-          }
-          http.end();
-        }
-      }
-    //----------------------------------------------------
+      hmi.setDwinBuf(address.c_str(), String(lastByte, DEC).c_str());
+      hmi.getDataFromDwin(address, lastByte);
     }
   });
   hmi.listen();
+  hmi.loop();
 
-  if(http_client_work){
-    String url_link = linkParam["urllink"];
-    String ports_data = linkParam["portsData"];
-
-    String link = url_link + ports_data;
-    Serial.println(link);
-
-
-    //String serverPath = "http://192.168.44.10/sec/?cmd=11:2";
-    HTTPClient http;
-    http.begin(link.c_str());
-    int httpResponseCode = http.GET();
-    if (httpResponseCode<0){
-    Serial.println("notConnect");
-    http_client_work = false;
-    }
-    else {
-      http_client_work = false;
-      Serial.println("Connect");
-    }
-    http.end();
-  }
   // mytime.loop([](){
   //   Serial.println("timer");
   //   hmi.setVP(0x5001,0x82);

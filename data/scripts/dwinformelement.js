@@ -129,6 +129,7 @@ export const formElement = (page, index, props)=> {
         <input type="number" name="address" id="address${page}${index}" page="${page}" index="${index}" value="${address}">
          
         <hr>
+        ${typebtn !== "Text"?`
         <div class="edit-form" style="margin:0;">
             <div class="edit-form">
                 <label for="minValue">Мин</label>
@@ -139,27 +140,25 @@ export const formElement = (page, index, props)=> {
                 <input type="number" name="maxValue" id="maxValue${page}${index}" page="${page}" index="${index}" value="${maxValue}" style="width: 50px;">
             </div>
         </div>
-    
+        `:""}
         <label for="dataDeafult">Значение по умоланию</label>
         <input changeInput type="${config.btnInput[typebtn].type}" max="${maxValue}" min="${minValue}" name="dataDeafult" id="dataDeafult${page}${index}" page="${page}" index="${index}" value="${dataDeafult}">
 
-        ${typebtn !== "Text"?`
         <hr>
         <h3>Данные контроллера</h3>
         <hr>
 
         <label for="urllink">URL адрес</label>
         <input linkPart type="text" name="urllink" id="urllink${page}${index}" page="${page}" index="${index}" value="${urlLink}">
-
+        ${typebtn !== "Text"?`
         <label for="ports">Порты</label>
         <input linkPart type="text" name="ports" id="ports${page}${index}" page="${page}" index="${index}" value="${ports}">
-
+        `:""}
         <label for="portsData">Данные порт</label>
         <input linkPart type="text" name="tempValue" portsData id="portsData${page}${index}" page="${page}" index="${index}" value="${tempValue}">
-
         <label for="statePort">Получить состояние порта</label>
         <input linkPart type="text" name="statePort" id="statePort${page}${index}" page="${page}" index="${index}" value="${statePort}">
-
+         ${typebtn !== "Text"?`
         <label for="lineRequest">Полученная строка запроса</label>
         <div style="margin:0;padding:0;display: flex;height: 31px;align-items: center;">
             <input type="text" id="lineRequest" class="edit-form-element-header" readonly style="font-size: 10px;flex-grow: 1;" value="${urlLink}${ports}">

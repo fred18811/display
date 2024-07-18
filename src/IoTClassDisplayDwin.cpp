@@ -123,7 +123,7 @@ short int DisplayDwin::getControllerResponseValue (String resp) {
     return -1;
 }
 
-void DisplayDwin::timerUpdate(){
+void DisplayDwin::timerUpdateTime(){
     int timer = dwinBuf["timer"];
     polling_timer.setValueTime(timer);   
 }
@@ -177,10 +177,14 @@ void DisplayDwin::dataControllerUpdate(AsyncWebSocket* handler){
     }    
 }
 
+void DisplayDwin::restartTimer (){
+    polling_timer.stopTimer();    
+};
+
 //Запучкается в области setup
 void DisplayDwin::setup(){
     echoEnabled(false);
-    timerUpdate();
+    timerUpdateTime();
 }
 
 //Запучкается в области loop

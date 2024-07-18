@@ -254,7 +254,7 @@ void setup() {
       //Пишем данные в буфер
       hmi.dwinBuf.clear();
       deserializeJson(hmi.dwinBuf,req);
-      hmi.timerUpdate();
+      hmi.timerUpdateTime();
       //Пишем данные в файл
       File fileDwin = SPIFFS.open ("/data/dwin.json",FILE_WRITE);
       if(fileDwin) serializeJson(hmi.dwinBuf, fileDwin);
@@ -351,6 +351,7 @@ void loop() {
 
   hmi.hmiCallBack([](String address, int lastByte, String message, String response){
     if(address.toInt() < 10000){ //Может задублироваться и быть не верный address
+      hmi.restartTimer();
       ws.textAll("{\"address\":" + address + ",\"data\":" + String(lastByte, DEC)  +"}" );
       hmi.setDwinBuf(address.c_str(), String(lastByte, DEC).c_str());
       hmi.getDataFromDwin(address, lastByte);

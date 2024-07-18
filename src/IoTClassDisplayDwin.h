@@ -29,7 +29,8 @@ class DisplayDwin : public DWIN{
         bool sendGetRequest ();
         bool getDataFromController ();
         bool getDataFromDwin (String address, int lastByte);
-        void timerUpdate();
+        void timerUpdateTime();
+        void restartTimer ();
         void dataControllerUpdate(AsyncWebSocket* handler); // обновление данных считывается с контроллера
         void setup();
         void loop(AsyncWebSocket* handler);

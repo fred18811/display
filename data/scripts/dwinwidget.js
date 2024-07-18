@@ -24,7 +24,7 @@ export const diwiwidget = (websocket) => {
     function changeValueObject (result) {
         const el = document.querySelectorAll(`[address="${result.address}"]`);
         el.forEach(i => {
-            i.hasAttribute("btnbutton") ? i.value = result.data : "";
+            i.hasAttribute("btnbutton") || i.hasAttribute("textbutton")? i.value = result.data : "";
             if(i.hasAttribute("btnligth")){ 
                 if(Number(result.data) > 0 && i.classList.contains("button-light-red")){
                     i.classList.remove("button-light-red");
@@ -34,7 +34,10 @@ export const diwiwidget = (websocket) => {
                     i.classList.remove("button-light-green");
                     i.classList.add("button-light-red");
                 }
-            };  
+            };
+            if(i.hasAttribute("textbutton")){
+                i.innerHTML = result.data;
+            }  
         })
 
     }
@@ -145,8 +148,17 @@ const buttons = {
         if(button.querySelector(`div[name='btn${page}${index}']`)) button.querySelector(`div[name='btn${page}${index}']`).addEventListener("click",(e)=>getValue(e, element.address));
         return button;
     },
-    Text : (page, id, element) => {
+    Text : (page, index, element) => {
         const text = helpFunctions.parsingHTMLElements(`
+        <div class="edit-form-element edit-form-column" id="dwinelement${page}${index}" index="${index}" >
+            <div class="edit-form edit-form-column" style="align-items: center; flex-grow:1;">
+                <label for="text${page}${index}" class="visually-hidden">${element.name}</label>
+                <hr style="width: 100%;">
+                <div class="edit-form" style="height: 100%;align-items: center;font-size: 60px;">
+                    <p textbutton address="${element.address}">${element.tempValue}</p>
+                </div>
+            </div>
+        </div>
         `);
         return text;
     }

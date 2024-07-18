@@ -1,5 +1,5 @@
 export const config = {
-    arrSend : [],
+    objSend : {timer:0,elements:[]},
     objselect : {obj:undefined},
     page : 0,
     btnInput : {

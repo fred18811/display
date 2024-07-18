@@ -68,3 +68,7 @@ void IoTTimer::loop(void f(), unsigned int cnt, unsigned long val){
         }
     }
 }
+
+unsigned long IoTTimer::getTimeSec() {
+    return value;
+}

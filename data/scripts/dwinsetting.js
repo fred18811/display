@@ -37,9 +37,14 @@ const buttonCreatNewElement = () => {
 // "Элементы кнопок"
 const formElementButtns = ()=> {
     //Отправить данные элементов на сервер
-    function sendSavedData (arr) {
+    function sendSavedData (obj) {
+        const arr = obj.elements;
         arr.length = 0;
         const arrEl = document.querySelectorAll("div [addressform]");
+        const dwinOptions = document.querySelectorAll("input[dwinoptions]");
+        dwinOptions.forEach(el => {
+            obj[el.name] = el.value;
+        });
         arrEl.forEach(el => {
             const obj = {}; //Создаем объекь, добавляем в него данные
             const childrenEl = el.querySelectorAll("[name]");
@@ -52,7 +57,9 @@ const formElementButtns = ()=> {
             });
             if(obj.address != "") arr.push(obj); //Добовляем объекты в массив
         });
-        const arrString = JSON.stringify(arr);
+
+        obj.elements = arr
+        const arrString = JSON.stringify(obj);
         const req = fetch(`/savedwinsetting`,{
             method: 'PUT',
             body: arrString,
@@ -78,12 +85,15 @@ const formElementButtns = ()=> {
      <input class="btnstyle" type="button" value="Сохранить">
     </div>
     `);
-    divElement.querySelector("input.btnstyle").addEventListener("click",()=>sendSavedData(config.arrSend));
+    divElement.querySelector("input.btnstyle").addEventListener("click",()=>sendSavedData(config.objSend));
     return divElement;
 }
 
 // Сюда приход запрос с сервера по data dwin
-const formContent = (arrElemntsDwin)=> {
+const formContent = (props)=> {
+    const arrElemntsDwin = props && props.elements ? props.elements : [];
+    const timer = props && props.timer ? props.timer : "";
+
     const divElement = helpFunctions.parsingHTMLElements(`
     <div>
         <h1>Настройки кнопок DWIN</h1>
@@ -91,6 +101,12 @@ const formContent = (arrElemntsDwin)=> {
             <div class="" pagecontent>
                 <div class="edit-form edit-form-column">
                     <hr style="min-width:244px">
+
+                    <div class="edit-form-element">
+                        <label for="timer">Время опроса состояния (сек.)</label>
+                        <input dwinoptions type="number" name="timer" id="timer${config.page}" page="${config.page}" index="${config.page}" value="${timer}">
+                    </div>
+
                     <div class="edit-form edit-form-row edit-form-wrap" page="${config.page}" formcontent></div>
                 </div>
             </div>

@@ -254,6 +254,7 @@ void setup() {
       //Пишем данные в буфер
       hmi.dwinBuf.clear();
       deserializeJson(hmi.dwinBuf,req);
+      hmi.timerUpdate();
       //Пишем данные в файл
       File fileDwin = SPIFFS.open ("/data/dwin.json",FILE_WRITE);
       if(fileDwin) serializeJson(hmi.dwinBuf, fileDwin);
@@ -356,7 +357,7 @@ void loop() {
     }
   });
   hmi.listen();
-  hmi.loop();
+  hmi.loop(&ws);
 
   // mytime.loop([](){
   //   Serial.println("timer");

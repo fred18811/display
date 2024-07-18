@@ -44,7 +44,7 @@ export const diwiwidget = (websocket) => {
     .then(response=>response.json())
     .then(data=> {
         if(document.querySelector("#widgets")) 
-            document.querySelector("#widgets").append(elementForm(data));
+            document.querySelector("#widgets").append(elementForm(data.elements));
             boolgetData.data = true;
     });
 }

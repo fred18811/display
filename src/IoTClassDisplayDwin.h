@@ -5,11 +5,15 @@
 #include <HTTPClient.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
+#include <IoTClassTimer.h>
 
 class DisplayDwin : public DWIN{
 
     private:
         bool http_client_work = false;
+        IoTTimer polling_timer;
+        String getLinkWithoutParameters (const char* str);
+        short int getControllerResponseValue (String resp); 
 
     public:
         StaticJsonDocument<400> linkParam; //Буфер хранения временных настроек для url контроллера
@@ -23,7 +27,10 @@ class DisplayDwin : public DWIN{
         String setDwinBuf(const char* address);
 
         bool sendGetRequest ();
+        bool getDataFromController ();
         bool getDataFromDwin (String address, int lastByte);
+        void timerUpdate();
+        void dataControllerUpdate(AsyncWebSocket* handler); // обновление данных считывается с контроллера
         void setup();
-        void loop();
+        void loop(AsyncWebSocket* handler);
 };

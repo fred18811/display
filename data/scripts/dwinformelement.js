@@ -15,7 +15,6 @@ export const formElement = (page, index, props)=> {
     const tempValue = props && props.tempValue ? props.tempValue : "";
     const minValue = props && props.minValue ? props.minValue : 0;
     const maxValue = props && props.maxValue ? props.maxValue : 0;
-    const timer = props && props.timer ? props.timer : 0;
     const statePort = props && props.statePort ? props.statePort : "";
 
     function getPageIndex (e) {
@@ -157,9 +156,6 @@ export const formElement = (page, index, props)=> {
 
         <label for="portsData">Данные порт</label>
         <input linkPart type="text" name="tempValue" portsData id="portsData${page}${index}" page="${page}" index="${index}" value="${tempValue}">
-
-        <label for="timer">Время опроса состояния (сек.)</label>
-        <input linkPart type="number" name="timer" id="timer${page}${index}" page="${page}" index="${index}" value="${timer}">
 
         <label for="statePort">Получить состояние порта</label>
         <input linkPart type="text" name="statePort" id="statePort${page}${index}" page="${page}" index="${index}" value="${statePort}">

@@ -22,6 +22,7 @@ class IoTTimer {
         void loop(void f()); //вызываем функцию по истечению времени и сбрасываем таймер
         void loop(void f(), unsigned int cnt); //вызываем функцию по истечению времени и сбрасываем таймер, выставляем число срабатываний
         void loop(void f(), unsigned int cnt, unsigned long val); //вызываем функцию по истечению времени и сбрасываем таймер, выставляем число срабатываний, выставляем время
+        unsigned long getTimeSec();
 };
 
 #endif // _IOTCLASSTIMER_H
